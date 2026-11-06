@@ -21,7 +21,7 @@ Go 1.27.1 (`go.mod`).
 | Build | `CGO_ENABLED=0 GOOS=linux go build ./cmd/ezgh-secrets-provider` |
 | Image | `docker build .` (one static binary on distroless) |
 | Tests | `go test -race $(go list ./... \| grep -v /internal/kit/)` |
-| Lint | `gofmt -l .`, `go vet ./...`, `go run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...` |
+| Lint | `gofmt -l .`; `go vet` and `go run honnef.co/go/tools/cmd/staticcheck@v0.8.1` over `$(go list ./... \| grep -v /internal/kit/)` (service-template checks the kit) |
 | Logging | `scripts/check-logging.sh` |
 
 CI (`.github/workflows/ci.yml`) runs them and builds the image, without pushing it, on every pull
@@ -31,10 +31,11 @@ request and push to main.
 
 Push a tag `vX.Y.Z` on main. `.github/workflows/release.yml` publishes the GitHub release
 (`ezgh-secrets-provider-linux-{amd64,arm64}`, `SHA256SUMS`) and pushes the linux/amd64 image to the
-kubernetes-addons Registry as `<host>/kubernetes/ezgh-secrets-provider:<tag>`. That needs repository
-secret `KUBERNETES_ADDONS_REGISTRY_KEY` (a platform-organization Bot key that can push to project
+kubernetes-addons Registry as `<host>/kubernetes/ezgh-secrets-provider:<tag>`. The image goes first and the binaries only after it, from GitHub Environment `release`
+(limited to tags `v*`): secret `KUBERNETES_ADDONS_REGISTRY_KEY` (a platform-organization Bot key that can push to project
 kubernetes-addons) and variable `KUBERNETES_ADDONS_REGISTRY_HOST` (`<hostId>.registry.ezghcloud.com`).
-A published tag never moves: a fix ships as a new version.
+A published tag never moves: a fix ships as a new version. The add-on bundle runs the image's
+commands and flags as they are: changing one needs a new bundle version in kubernetes-stack too.
 
 kubernetes-stack's `secrets-store` add-on bundle pins the image in its `images.json`
 (`ezgh-secrets-provider`).
